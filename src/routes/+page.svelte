@@ -66,7 +66,7 @@
             >
               🔊 播放發音
             </button>
-            <audio bind:this={audioRef} src={entry.audio} preload="auto" />
+            <audio bind:this={audioRef} src={entry.audio} preload="auto" ></audio>
           {/if}
         </p>
 
