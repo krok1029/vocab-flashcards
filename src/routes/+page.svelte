@@ -3,28 +3,37 @@
   import { searchWord } from "$lib/usecases/searchDictionary";
 
   let query = '';
-  let entries: DictionaryEntry[] = [];
+  let entry: DictionaryEntry | null = null;
   let error = '';
   let loading = false;
+  let audioRef: HTMLAudioElement | null = null;
 
   async function search() {
     if (!query) return;
     loading = true;
-    entries = [];
     error = '';
+    entry = null;
 
     try {
-      entries = await searchWord(query);
+      entry = await searchWord(query);
     } catch (e) {
       error = (e as Error).message;
     } finally {
       loading = false;
     }
   }
+
+  function playAudio() {
+    if (audioRef) {
+      audioRef.currentTime = 0;
+      audioRef.play();
+    }
+  }
 </script>
 
 <main class="p-4 space-y-4">
   <h1 class="text-2xl font-bold">📖 字典查詢</h1>
+
   <div class="my-4 text-lg text-gray-500">
     <a href="/import">Go to import page</a>
   </div>
@@ -45,34 +54,43 @@
     <p>載入中...</p>
   {:else if error}
     <p class="text-red-500">{error}</p>
-  {:else if entries.length > 0}
+  {:else if entry}
     <div class="space-y-6">
-      {#each entries as entry}
-        <div class="bg-gray-100 p-4 rounded shadow">
-          <p class="text-xl font-bold">{entry.word}</p>
-
-          {#if entry.phonetic}
-            <p class="text-gray-600">音標：{entry.phonetic}</p>
+      <div class="bg-gray-100 p-4 rounded shadow">
+        <p class="text-xl font-bold flex items-center gap-2">
+          {entry.word}
+          {#if entry.audio}
+            <button
+              on:click={playAudio}
+              class="text-sm text-blue-600 underline hover:text-blue-800"
+            >
+              🔊 播放發音
+            </button>
+            <audio bind:this={audioRef} src={entry.audio} preload="auto" />
           {/if}
+        </p>
 
-          {#each entry.meanings as meaning}
-            <div class="mt-3">
-              <p class="font-semibold text-blue-600">{meaning.partOfSpeech}</p>
-              <ul class="list-disc list-inside ml-4">
-                {#each meaning.definitions as def}
-                  <li>
-                    {def.definition}
-                    {#if def.example}
-                      <br />
-                      <small class="text-gray-500">例句：{def.example}</small>
-                    {/if}
-                  </li>
-                {/each}
-              </ul>
-            </div>
-          {/each}
-        </div>
-      {/each}
+        {#if entry.phonetic}
+          <p class="text-gray-600">音標：{entry.phonetic}</p>
+        {/if}
+
+        {#each entry.meanings as meaning}
+          <div class="mt-3">
+            <p class="font-semibold text-blue-600">{meaning.partOfSpeech}</p>
+            <ul class="list-disc list-inside ml-4">
+              {#each meaning.definitions as def}
+                <li>
+                  {def.definition}
+                  {#if def.example}
+                    <br />
+                    <small class="text-gray-500">例句：{def.example}</small>
+                  {/if}
+                </li>
+              {/each}
+            </ul>
+          </div>
+        {/each}
+      </div>
     </div>
   {/if}
 </main>

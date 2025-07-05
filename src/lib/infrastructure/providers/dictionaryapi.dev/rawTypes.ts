@@ -1,7 +1,8 @@
-export type DictionaryEntry = {
+// src/lib/adapters/rawTypes.ts
+export type RawDictionaryEntry = {
   word: string;
   phonetic?: string;
-  audio?: string;
+  phonetics: { text?: string; audio?: string }[];
   meanings: {
     partOfSpeech: string;
     definitions: {

@@ -1,22 +1,18 @@
-// src/lib/usecases/searchDictionary.ts
+// ✅ src/lib/usecases/searchDictionary.ts
 
-import { fetchDictionaryEntry } from '$lib/infrastructure/dictionaryApi';
+import { fetchDictionaryEntry } from '$lib/infrastructure/dictionaryService';
 import type { DictionaryEntry } from '$lib/domain/dictionary';
 
 /**
  * 查詢字典詞條，如果找不到，會拋出錯誤。
+ * 回傳已整理過的 DictionaryEntry。
  */
-export async function searchWord(word: string): Promise<DictionaryEntry[]> {
-  const result = await fetchDictionaryEntry(word);
+export async function searchWord(word: string): Promise<DictionaryEntry> {
+  const entry = await fetchDictionaryEntry(word);
 
-  if (result.success) {
-    return result.entries;
+  if (!entry) {
+    throw new Error(`找不到 "${word}" 的定義`);
   }
 
-  // Application Layer 可選擇將錯誤語意拋出，由上層 UI 捕捉
-  if (result.reason === 'not_found') {
-    throw new Error(`找不到單字 "${word}" 的定義`);
-  } else {
-    throw new Error(`查詢失敗：${result.message}`);
-  }
+  return entry;
 }
