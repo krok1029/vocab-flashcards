@@ -1,12 +1,11 @@
 <script lang="ts">
-  let fileContent: string = '';
+  import { Input } from '$lib/components/ui/input/index.js';
+  let files: FileList;
+  let fileContent = '';
   let lines: string[] = [];
 
-  function handleFileUpload(event: Event) {
-    const input = event.target as HTMLInputElement;
-    const file = input.files?.[0];
-    if (!file) return;
-
+  $: if (files && files.length > 0) {
+    const file = files[0];
     const reader = new FileReader();
     reader.onload = (e) => {
       fileContent = e.target?.result as string;
@@ -16,18 +15,18 @@
         .filter((l) => l.length > 0);
 
       let uniqueWords = [...new Set(rawLines)];
-      lines = uniqueWords.map((word) => {
-        return word;
-      });
+      lines = uniqueWords;
     };
     reader.readAsText(file);
   }
 </script>
 
-<div class="p-6 space-y-4">
+<div class="p-4 space-y-4">
   <h1 class="text-2xl font-bold">📥 匯入 .txt 檔案</h1>
-
-  <input type="file" accept=".txt" on:change={handleFileUpload} />
+  <div class="my-4 text-lg text-gray-500">
+    <a href="/">Go to search page</a>
+  </div>
+  <Input type="file" accept=".txt" bind:files />
 
   {#if lines.length > 0}
     <h2 class="text-lg font-semibold">預覽內容（{lines.length} 筆）</h2>

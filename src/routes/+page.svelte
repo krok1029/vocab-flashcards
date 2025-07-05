@@ -15,8 +15,8 @@
 </script>
 
 <main class="p-4 space-y-4">
-  <h1 class="text-2xl font-bold">字典查詢</h1>
-  <div> <a href="/import">go to import page</a></div>
+  <h1 class="text-2xl font-bold">📖 字典查詢</h1>
+  <div class="my-4 text-lg text-gray-500"> <a href="/import">Go to import page</a></div>
 
   <div class="flex gap-2">
     <input
