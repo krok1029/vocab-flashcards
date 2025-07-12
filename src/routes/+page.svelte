@@ -1,5 +1,7 @@
 <script lang="ts">
   import { invoke } from '@tauri-apps/api/core';
+  import { toast } from 'svelte-sonner';
+  import Button from '$lib/components/ui/button/button.svelte';
   import type { DictionaryEntry } from '$lib/domain/dictionary';
   import { searchWord } from '$lib/usecases/searchDictionary';
 
@@ -7,16 +9,16 @@
   let entry: DictionaryEntry | null = null;
   let error = '';
   let loading = false;
-  let audioRef: HTMLAudioElement | null = null;
+  let audioPlayer: HTMLAudioElement | null = null;
 
   async function search() {
-    if (!query) return;
+    if (!query.trim()) return;
     loading = true;
     error = '';
     entry = null;
 
     try {
-      entry = await searchWord(query);
+      entry = await searchWord(query.trim());
     } catch (e) {
       error = (e as Error).message;
     } finally {
@@ -24,40 +26,38 @@
     }
   }
 
-async function saveWordCard() {
-  if (!entry) return;
-
-  const posList = entry.meanings.map((m) => m.partOfSpeech);
-  const firstDefinition =
-    entry.meanings[0]?.definitions?.[0]?.definition || '';
-  const pronunciation = {
-    phonetic: entry.phonetic || '',
-    audio: entry.audio || '',
-  };
-
-  try {
-    await invoke('save_word_card', {
-      card: {
-        word: entry.word,
-        pos: JSON.stringify(posList),
-        definition: firstDefinition,
-        pronunciation: JSON.stringify(pronunciation),
-        verbs: JSON.stringify({}), // 暫時無動詞變化資料
-        familiarity: 0,
-        seen_count: 1,
-      },
-    });
-    alert(`儲存成功：${entry.word}`);
-  } catch (e) {
-    console.error(e);
-    alert('儲存失敗');
+  function prepareCardPayload(entry: DictionaryEntry) {
+    return {
+      word: entry.word,
+      pos: JSON.stringify(entry.meanings.map((m) => m.partOfSpeech)),
+      definition: entry.meanings[0]?.definitions?.[0]?.definition || '',
+      pronunciation: JSON.stringify({
+        phonetic: entry.phonetic || '',
+        audio: entry.audio || '',
+      }),
+      verbs: JSON.stringify({}), // 未來若有可擴充
+      familiarity: 0,
+      seen_count: 1,
+    };
   }
-}
+
+  async function saveWordCard() {
+    if (!entry) return;
+    const card = prepareCardPayload(entry);
+
+    try {
+      await invoke('save_word_card', { card });
+      toast.success(`已儲存：${card.word}`);
+    } catch (e) {
+      console.error(e);
+      toast.error(`儲存失敗: ${e}`);
+    }
+  }
 
   function playAudio() {
-    if (audioRef) {
-      audioRef.currentTime = 0;
-      audioRef.play();
+    if (audioPlayer) {
+      audioPlayer.currentTime = 0;
+      audioPlayer.play();
     }
   }
 </script>
@@ -66,7 +66,7 @@ async function saveWordCard() {
   <h1 class="text-2xl font-bold">📖 字典查詢</h1>
 
   <div class="my-4 text-lg text-gray-500">
-    <a href="/import">Go to import page</a>
+    <a href="/import" class="hover:underline text-blue-600">Go to import page</a>
   </div>
 
   <div class="flex gap-2">
@@ -76,16 +76,16 @@ async function saveWordCard() {
       bind:value={query}
       on:keydown={(e) => e.key === 'Enter' && search()}
     />
-    <button class="bg-blue-500 text-white px-4 py-1 rounded" on:click={search}>
+    <Button class="bg-blue-500 text-white px-4 py-1 rounded" onclick={search}>
       查詢
-    </button>
-    <button
-      class="px-4 py-2 rounded bg-blue-600 text-white"
-      on:click={saveWordCard}
+    </Button>
+    <Button
+      class="px-4 py-1 rounded bg-green-600 text-white"
+      onclick={saveWordCard}
       disabled={!entry}
     >
       加入單字卡
-    </button>
+    </Button>
   </div>
 
   {#if loading}
@@ -104,8 +104,7 @@ async function saveWordCard() {
             >
               🔊 播放發音
             </button>
-            <audio bind:this={audioRef} src={entry.audio} preload="auto"
-            ></audio>
+            <audio bind:this={audioPlayer} src={entry.audio} preload="auto" ></audio>
           {/if}
         </p>
 
