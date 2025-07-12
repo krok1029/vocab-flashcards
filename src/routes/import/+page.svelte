@@ -1,5 +1,5 @@
 <script lang="ts">
-  import { Input } from '$lib/components/ui/input/index.js';
+  import { Input } from '$lib/presentation/components/ui/input/index.js';
   let files: FileList;
   let fileContent = '';
   let lines: string[] = [];

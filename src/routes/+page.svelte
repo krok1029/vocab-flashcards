@@ -1,10 +1,10 @@
 <script lang="ts">
   import { invoke } from '@tauri-apps/api/core';
   import { toast } from 'svelte-sonner';
-  import Button from '$lib/components/ui/button/button.svelte';
-  import type { DictionaryEntry } from '$lib/domain/dictionary';
-  import { searchWord } from '$lib/usecases/searchDictionary';
-  import * as Alert from '$lib/components/ui/alert/index.js';
+  import Button from '$lib/presentation/components/ui/button/button.svelte';
+  import type { DictionaryEntry } from '$lib/domain/models/dictionary';
+  import { searchWord } from '$lib/application/services/searchDictionary';
+  import * as Alert from '$lib/presentation/components/ui/alert/index.js';
 
   let query = '';
   let entry: DictionaryEntry | null = null;
