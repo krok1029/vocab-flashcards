@@ -1,2 +1,2 @@
 // Command patterns will be defined here
-export {}
+export * from './searchCommand';

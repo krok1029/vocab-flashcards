@@ -1,2 +1,2 @@
 // Svelte stores will be defined here
-export {}
+export * from './dictionaryStore';

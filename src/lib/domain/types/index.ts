@@ -6,3 +6,5 @@ export interface WordCard {
   example?: string;
   created_at?: string;
 }
+
+export * from './wordCard';

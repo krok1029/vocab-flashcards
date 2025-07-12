@@ -1,2 +1,2 @@
 // Layout components will be exported here
-export {}
+export { default as MainLayout } from './MainLayout.svelte';

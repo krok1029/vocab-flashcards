@@ -1,187 +1,111 @@
 <script lang="ts">
-  import { invoke } from '@tauri-apps/api/core';
-  import { toast } from 'svelte-sonner';
-  import Button from '$lib/presentation/components/ui/button/button.svelte';
-  import type { DictionaryEntry } from '$lib/domain/models/dictionary';
-  import { searchWord } from '$lib/application/services/searchDictionary';
+  import { onMount } from 'svelte';
   import * as Alert from '$lib/presentation/components/ui/alert/index.js';
+  import { 
+    SearchInput, 
+    WordDisplay, 
+    LoadingSpinner, 
+    ErrorDisplay 
+  } from '$lib/presentation/components';
+  import { MainLayout } from '$lib/presentation/layouts';
+  import { 
+    dictionaryStore, 
+    hasEntry, 
+    canSaveCard 
+  } from '$lib/application/stores';
+  import { 
+    SearchCommand, 
+    SaveWordCardCommand 
+  } from '$lib/application/commands';
 
-  let query = '';
-  let entry: DictionaryEntry | null = null;
-  let error = '';
-  let loading = false;
-  let audioPlayer: HTMLAudioElement | null = null;
-  let existsInCard = false; // 用來控制 UI 顯示「已存在」
+  // Reactive store subscriptions
+  $: ({ query, entry, loading, error, existsInCard } = $dictionaryStore);
+  $: showEntry = $hasEntry;
+  $: canSave = $canSaveCard;
 
-  function mapWordCardToDictionaryEntry(card: WordCard): DictionaryEntry {
-    return {
-      word: card.word,
-      phonetic: parsePronunciation(card.pronunciation)?.phonetic ?? '',
-      audio: parsePronunciation(card.pronunciation)?.audio ?? '',
-      meanings: card.pos
-        ? [
-            {
-              partOfSpeech: card.pos,
-              definitions: [
-                {
-                  definition: card.definition ?? '',
-                  example: undefined, // DB 中沒有儲存 example
-                },
-              ],
-            },
-          ]
-        : [],
+  // Event handlers
+  async function handleSearch(event: CustomEvent<string>) {
+    const searchQuery = event.detail;
+    dictionaryStore.setQuery(searchQuery);
+    await SearchCommand.execute(searchQuery);
+  }
+
+  async function handleSave() {
+    await SaveWordCardCommand.execute();
+  }
+
+  function handleRetry() {
+    if (query.trim()) {
+      SearchCommand.execute(query);
+    }
+  }
+
+  // Cleanup on component destroy
+  onMount(() => {
+    return () => {
+      dictionaryStore.reset();
     };
-  }
-
-  // 輔助 function：從 JSON 字串中取出 pronunciation 音標與音檔
-  function parsePronunciation(json: string | null | undefined): {
-    phonetic?: string;
-    audio?: string;
-  } | null {
-    try {
-      return json ? JSON.parse(json) : null;
-    } catch {
-      return null;
-    }
-  }
-
-  async function search() {
-    if (!query.trim()) return;
-    loading = true;
-    error = '';
-    entry = null;
-    existsInCard = false;
-
-    const word = query.trim();
-
-    try {
-      const card = await invoke<WordCard | null>('get_word_card_by_word', {
-        wordQuery: word,
-      });
-
-      if (card) {
-        entry = mapWordCardToDictionaryEntry(card);
-        existsInCard = true;
-      } else {
-        entry = await searchWord(word);
-      }
-    } catch (e) {
-      toast.error(`Search fail: ${e}`);
-    } finally {
-      loading = false;
-    }
-  }
-
-  function prepareCardPayload(entry: DictionaryEntry) {
-    return {
-      word: entry.word,
-      pos: JSON.stringify(entry.meanings.map((m) => m.partOfSpeech)),
-      definition: entry.meanings[0]?.definitions?.[0]?.definition || '',
-      pronunciation: JSON.stringify({
-        phonetic: entry.phonetic || '',
-        audio: entry.audio || '',
-      }),
-      verbs: JSON.stringify({}), // 未來若有可擴充
-      familiarity: 0,
-      seen_count: 1,
-    };
-  }
-
-  async function saveWordCard() {
-    if (!entry) return;
-    const card = prepareCardPayload(entry);
-
-    try {
-      await invoke('save_word_card', { card });
-      toast.success(`已儲存：${card.word}`);
-    } catch (e) {
-      toast.error(`儲存失敗: ${e}`);
-    }
-  }
-
-  function playAudio() {
-    if (audioPlayer) {
-      audioPlayer.currentTime = 0;
-      audioPlayer.play();
-    }
-  }
+  });
 </script>
 
-<main class="p-4 space-y-4">
-  <h1 class="text-2xl font-bold">📖 字典查詢</h1>
+<MainLayout 
+  title="字典查詢 - 單字卡工具" 
+  description="查詢英文單字定義、發音，並建立個人單字卡"
+>
+  <div class="space-y-6 max-w-4xl mx-auto">
+    <!-- Page Header -->
+    <header class="text-center space-y-2">
+      <h1 class="text-3xl font-bold text-gray-800">📖 字典查詢</h1>
+      <p class="text-gray-600">輸入英文單字，查看詳細定義與發音</p>
+    </header>
 
-  <div class="my-4 text-lg text-gray-500">
-    <a href="/import" class="hover:underline text-blue-600">Go to import page</a
-    >
-  </div>
+    <!-- Existing Word Alert -->
+    {#if existsInCard}
+      <Alert.Root class="border-amber-200 bg-amber-50">
+        <Alert.Title class="text-amber-800">提示</Alert.Title>
+        <Alert.Description class="text-amber-700">
+          此單字已存在於單字卡中
+        </Alert.Description>
+      </Alert.Root>
+    {/if}
 
-  {#if existsInCard}
-    <Alert.Root>
-      <Alert.Title>此單字已存在於單字卡中</Alert.Title>
-    </Alert.Root>
-  {/if}
-  <div class="flex gap-2">
-    <input
-      class="border rounded px-2 py-1 flex-1"
-      placeholder="輸入單字..."
-      bind:value={query}
-      on:keydown={(e) => e.key === 'Enter' && search()}
-    />
-    <Button class="bg-blue-500 text-white px-4 py-1 rounded" onclick={search}>
-      查詢
-    </Button>
-    <Button
-      class="px-4 py-1 rounded bg-green-600 text-white"
-      onclick={saveWordCard}
-      disabled={!entry}
-    >
-      加入單字卡
-    </Button>
-  </div>
+    <!-- Search Section -->
+    <section class="space-y-4">
+      <SearchInput 
+        bind:query
+        {loading}
+        canSave={canSave}
+        on:search={handleSearch}
+        on:save={handleSave}
+      />
+    </section>
 
-  {#if loading}
-    <p>載入中...</p>
-  {:else if error}
-    <p class="text-red-500">{error}</p>
-  {:else if entry}
-    <div class="space-y-6">
-      <div class="bg-gray-100 p-4 rounded shadow">
-        <p class="text-xl font-bold flex items-center gap-2">
-          {entry.word}
-          {#if entry.audio}
-            <button
-              on:click={playAudio}
-              class="text-sm text-blue-600 underline hover:text-blue-800"
-            >
-              🔊 播放發音
-            </button>
-            <audio bind:this={audioPlayer} src={entry.audio} preload="auto"
-            ></audio>
-          {/if}
-        </p>
-
-        {#if entry.phonetic}
-          <p class="text-gray-600">音標：{entry.phonetic}</p>
-        {/if}
-
-        {#each entry.meanings as meaning}
-          <div class="mt-3">
-            <p class="font-semibold text-blue-600">{meaning.partOfSpeech}</p>
-            <ul class="list-disc list-inside ml-4">
-              {#each meaning.definitions as def}
-                <li>
-                  {def.definition}
-                  {#if def.example}
-                    <br />
-                    <small class="text-gray-500">例句：{def.example}</small>
-                  {/if}
-                </li>
-              {/each}
-            </ul>
+    <!-- Content Section -->
+    <section class="space-y-4">
+      {#if loading}
+        <LoadingSpinner message="正在查詢單字..." />
+      {:else if error}
+        <ErrorDisplay {error} onRetry={handleRetry} />
+      {:else if showEntry && entry}
+        <WordDisplay {entry} />
+      {:else if query.trim()}
+        <div class="text-center text-gray-500 py-8">
+          <div class="text-4xl mb-4">🔍</div>
+          <p class="text-lg">未找到相關結果</p>
+          <p class="text-sm mt-2">請嘗試其他單字或檢查拼寫</p>
+        </div>
+      {:else}
+        <div class="text-center text-gray-400 py-12">
+          <div class="text-6xl mb-4">📚</div>
+          <p class="text-lg font-medium">輸入單字開始查詢</p>
+          <p class="text-sm mt-2">支援英文單字查詢與發音播放</p>
+          <div class="mt-6 text-xs text-gray-400 space-y-1">
+            <p>💡 提示：按 Enter 鍵快速搜尋</p>
+            <p>🔊 支援發音播放功能</p>
+            <p>💾 一鍵加入個人單字卡</p>
           </div>
-        {/each}
-      </div>
-    </div>
-  {/if}
-</main>
+        </div>
+      {/if}
+    </section>
+  </div>
+</MainLayout>
