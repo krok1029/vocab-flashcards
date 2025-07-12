@@ -4,23 +4,70 @@
   import Button from '$lib/components/ui/button/button.svelte';
   import type { DictionaryEntry } from '$lib/domain/dictionary';
   import { searchWord } from '$lib/usecases/searchDictionary';
+  import * as Alert from '$lib/components/ui/alert/index.js';
 
   let query = '';
   let entry: DictionaryEntry | null = null;
   let error = '';
   let loading = false;
   let audioPlayer: HTMLAudioElement | null = null;
+  let existsInCard = false; // 用來控制 UI 顯示「已存在」
+
+  function mapWordCardToDictionaryEntry(card: WordCard): DictionaryEntry {
+    return {
+      word: card.word,
+      phonetic: parsePronunciation(card.pronunciation)?.phonetic ?? '',
+      audio: parsePronunciation(card.pronunciation)?.audio ?? '',
+      meanings: card.pos
+        ? [
+            {
+              partOfSpeech: card.pos,
+              definitions: [
+                {
+                  definition: card.definition ?? '',
+                  example: undefined, // DB 中沒有儲存 example
+                },
+              ],
+            },
+          ]
+        : [],
+    };
+  }
+
+  // 輔助 function：從 JSON 字串中取出 pronunciation 音標與音檔
+  function parsePronunciation(json: string | null | undefined): {
+    phonetic?: string;
+    audio?: string;
+  } | null {
+    try {
+      return json ? JSON.parse(json) : null;
+    } catch {
+      return null;
+    }
+  }
 
   async function search() {
     if (!query.trim()) return;
     loading = true;
     error = '';
     entry = null;
+    existsInCard = false;
+
+    const word = query.trim();
 
     try {
-      entry = await searchWord(query.trim());
+      const card = await invoke<WordCard | null>('get_word_card_by_word', {
+        wordQuery: word,
+      });
+
+      if (card) {
+        entry = mapWordCardToDictionaryEntry(card);
+        existsInCard = true;
+      } else {
+        entry = await searchWord(word);
+      }
     } catch (e) {
-      error = (e as Error).message;
+      toast.error(`Search fail: ${e}`);
     } finally {
       loading = false;
     }
@@ -49,7 +96,6 @@
       await invoke('save_word_card', { card });
       toast.success(`已儲存：${card.word}`);
     } catch (e) {
-      console.error(e);
       toast.error(`儲存失敗: ${e}`);
     }
   }
@@ -66,9 +112,15 @@
   <h1 class="text-2xl font-bold">📖 字典查詢</h1>
 
   <div class="my-4 text-lg text-gray-500">
-    <a href="/import" class="hover:underline text-blue-600">Go to import page</a>
+    <a href="/import" class="hover:underline text-blue-600">Go to import page</a
+    >
   </div>
 
+  {#if existsInCard}
+    <Alert.Root>
+      <Alert.Title>此單字已存在於單字卡中</Alert.Title>
+    </Alert.Root>
+  {/if}
   <div class="flex gap-2">
     <input
       class="border rounded px-2 py-1 flex-1"
@@ -104,7 +156,8 @@
             >
               🔊 播放發音
             </button>
-            <audio bind:this={audioPlayer} src={entry.audio} preload="auto" ></audio>
+            <audio bind:this={audioPlayer} src={entry.audio} preload="auto"
+            ></audio>
           {/if}
         </p>
 

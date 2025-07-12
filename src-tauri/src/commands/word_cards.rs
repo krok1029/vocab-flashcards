@@ -40,3 +40,23 @@ pub fn save_word_card(card: NewWordCard) -> Result<(), String> {
 
     Ok(())
 }
+
+use crate::models::word_cards::WordCard; // 確保有這個 model
+
+#[tauri::command]
+pub fn get_word_card_by_word(word_query: String) -> Result<Option<WordCard>, String> {
+    let mut conn = establish_connection();
+
+    match word_cards
+        .filter(word.eq(&word_query))
+        .select(WordCard::as_select()) // 明確選取 struct 對應欄位
+        .first::<WordCard>(&mut conn)
+    {
+        Ok(card) => Ok(Some(card)),
+        Err(diesel::result::Error::NotFound) => Ok(None),
+        Err(e) => {
+            println!("❌ 查詢單字卡失敗：{}", e);
+            Err(e.to_string())
+        }
+    }
+}

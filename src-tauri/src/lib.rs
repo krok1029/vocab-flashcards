@@ -27,7 +27,8 @@ pub fn run() {
         .invoke_handler(
             tauri::generate_handler![
                 greet, // ✅ 這裡要有
-                commands::word_cards::save_word_card
+                commands::word_cards::save_word_card,
+                commands::word_cards::get_word_card_by_word,
             ]
         )
         .run(tauri::generate_context!())
