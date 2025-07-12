@@ -1,6 +1,7 @@
 <script lang="ts">
-  import type { DictionaryEntry } from "$lib/domain/dictionary";
-  import { searchWord } from "$lib/usecases/searchDictionary";
+  import { invoke } from '@tauri-apps/api/core';
+  import type { DictionaryEntry } from '$lib/domain/dictionary';
+  import { searchWord } from '$lib/usecases/searchDictionary';
 
   let query = '';
   let entry: DictionaryEntry | null = null;
@@ -22,6 +23,36 @@
       loading = false;
     }
   }
+
+async function saveWordCard() {
+  if (!entry) return;
+
+  const posList = entry.meanings.map((m) => m.partOfSpeech);
+  const firstDefinition =
+    entry.meanings[0]?.definitions?.[0]?.definition || '';
+  const pronunciation = {
+    phonetic: entry.phonetic || '',
+    audio: entry.audio || '',
+  };
+
+  try {
+    await invoke('save_word_card', {
+      card: {
+        word: entry.word,
+        pos: JSON.stringify(posList),
+        definition: firstDefinition,
+        pronunciation: JSON.stringify(pronunciation),
+        verbs: JSON.stringify({}), // 暫時無動詞變化資料
+        familiarity: 0,
+        seen_count: 1,
+      },
+    });
+    alert(`儲存成功：${entry.word}`);
+  } catch (e) {
+    console.error(e);
+    alert('儲存失敗');
+  }
+}
 
   function playAudio() {
     if (audioRef) {
@@ -48,6 +79,13 @@
     <button class="bg-blue-500 text-white px-4 py-1 rounded" on:click={search}>
       查詢
     </button>
+    <button
+      class="px-4 py-2 rounded bg-blue-600 text-white"
+      on:click={saveWordCard}
+      disabled={!entry}
+    >
+      加入單字卡
+    </button>
   </div>
 
   {#if loading}
@@ -66,7 +104,8 @@
             >
               🔊 播放發音
             </button>
-            <audio bind:this={audioRef} src={entry.audio} preload="auto" ></audio>
+            <audio bind:this={audioRef} src={entry.audio} preload="auto"
+            ></audio>
           {/if}
         </p>
 
