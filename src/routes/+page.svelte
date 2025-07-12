@@ -72,7 +72,7 @@
     <!-- Search Section -->
     <section class="space-y-4">
       <SearchInput 
-        bind:query
+        query={query}
         {loading}
         canSave={canSave}
         on:search={handleSearch}

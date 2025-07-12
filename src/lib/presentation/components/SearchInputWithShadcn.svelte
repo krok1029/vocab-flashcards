@@ -7,20 +7,14 @@
   export let loading = false;
   export let canSave = false;
 
-  // Internal state for the input field
-  let inputValue = query;
-
-  // Update internal state when external query changes
-  $: inputValue = query;
-
   const dispatch = createEventDispatcher<{
     search: string;
     save: void;
   }>();
 
   function handleSearch() {
-    console.log('Searching for:', inputValue);
-    dispatch('search', inputValue);
+    console.log('Searching for:', query);
+    dispatch('search', query);
   }
 
   function handleSave() {
@@ -39,20 +33,20 @@
   <Input
     class="flex-1"
     placeholder="輸入單字..."
-    bind:value={inputValue}
-    onkeydown={handleKeydown}
-    disabled={loading}
+    bind:value={query}
+    on:keydown={handleKeydown}
+    {disabled}={loading}
   />
   <Button 
     class="bg-blue-500 text-white px-4 py-1 rounded hover:bg-blue-600 disabled:opacity-50" 
-    onclick={handleSearch}
+    on:click={handleSearch}
     disabled={loading}
   >
     {loading ? '載入中...' : '查詢'}
   </Button>
   <Button
     class="px-4 py-1 rounded bg-green-600 text-white hover:bg-green-700 disabled:opacity-50"
-    onclick={handleSave}
+    on:click={handleSave}
     disabled={!canSave || loading}
   >
     加入單字卡
