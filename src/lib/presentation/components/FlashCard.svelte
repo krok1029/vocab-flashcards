@@ -1,63 +1,82 @@
 <script lang="ts">
   import type { WordCard } from '$lib/domain/types/wordCard';
   import { parsePronunciation } from '$lib/presentation/utils';
-  import { Button } from '$lib/presentation/components/ui/button';
-  import { Card, CardContent, CardHeader } from '$lib/presentation/components/ui/card';
+  import {
+    Card,
+    CardContent,
+    CardHeader,
+  } from '$lib/presentation/components/ui/card';
 
   interface Props {
     card: WordCard;
     onupdatefamiliarity: (familiarity: number) => void;
     ondelete: () => void;
+    onflip?: () => void;
+    isFlipped?: boolean;
   }
 
-  let { card, onupdatefamiliarity, ondelete }: Props = $props();
+  let { card, onupdatefamiliarity, ondelete, onflip, isFlipped = false }: Props = $props();
 
-  let isFlipped = $state(false);
-  let isPlaying = $state(false);
+  let internalFlipped = $state(false);
 
   // 使用 $derived rune 進行響應式計算
   const pronunciation = $derived(parsePronunciation(card.pronunciation));
   const posArray = $derived(card.pos ? JSON.parse(card.pos) : []);
 
-  // 熟悉度等級定義
-  const familiarityLevels = [
-    { level: 0, label: '不熟悉', color: 'bg-red-100 text-red-800', emoji: '😰' },
-    { level: 1, label: '稍微熟悉', color: 'bg-orange-100 text-orange-800', emoji: '🤔' },
-    { level: 2, label: '熟悉', color: 'bg-yellow-100 text-yellow-800', emoji: '😊' },
-    { level: 3, label: '非常熟悉', color: 'bg-green-100 text-green-800', emoji: '😎' }
-  ];
+  // 使用 $derived 來計算實際的翻轉狀態
+  const actualFlipped = $derived(isFlipped !== undefined ? isFlipped : internalFlipped);
 
-  const currentFamiliarity = $derived(familiarityLevels[card.familiarity] || familiarityLevels[0]);
+  // 解析定義文本為結構化資料
+  const parsedDefinitions = $derived(
+    (() => {
+      if (!card.definition) return [];
+
+      const definitionBlocks = card.definition.split('\n\n');
+      return definitionBlocks.map((block) => {
+        const lines = block.split('\n');
+        const firstLine = lines[0];
+
+        // 提取詞性和定義
+        const posMatch = firstLine.match(/^\[([^\]]+)\]\s*(.+)$/);
+        const partOfSpeech = posMatch ? posMatch[1] : '';
+        const definition = posMatch ? posMatch[2] : firstLine;
+
+        // 提取例句
+        const exampleLine = lines.find((line) => line.startsWith('例句: '));
+        const example = exampleLine ? exampleLine.replace('例句: ', '') : null;
+
+        // 提取同義詞
+        const synonymsLine = lines.find((line) => line.startsWith('同義詞: '));
+        const synonyms = synonymsLine
+          ? synonymsLine.replace('同義詞: ', '').split(', ')
+          : [];
+
+        // 提取反義詞
+        const antonymsLine = lines.find((line) => line.startsWith('反義詞: '));
+        const antonyms = antonymsLine
+          ? antonymsLine.replace('反義詞: ', '').split(', ')
+          : [];
+
+        return {
+          partOfSpeech,
+          definition,
+          example,
+          synonyms,
+          antonyms,
+        };
+      });
+    })()
+  );
 
   // 翻轉卡片
   function flipCard() {
-    isFlipped = !isFlipped;
-  }
-
-  // 播放發音
-  async function playPronunciation() {
-    if (!pronunciation?.audio || isPlaying) return;
-    
-    try {
-      isPlaying = true;
-      const audio = new Audio(pronunciation.audio);
-      audio.onended = () => isPlaying = false;
-      audio.onerror = () => isPlaying = false;
-      await audio.play();
-    } catch (error) {
-      console.error('Failed to play audio:', error);
-      isPlaying = false;
+    if (isFlipped !== undefined) {
+      // 使用外部狀態
+      onflip?.();
+    } else {
+      // 使用內部狀態
+      internalFlipped = !internalFlipped;
     }
-  }
-
-  // 更新熟悉度
-  function updateFamiliarity(level: number) {
-    onupdatefamiliarity(level);
-  }
-
-  // 刪除卡片
-  function deleteCard() {
-    ondelete();
   }
 
   // 格式化日期
@@ -70,155 +89,145 @@
 <div class="max-w-2xl mx-auto">
   <!-- 卡片容器 -->
   <div class="relative perspective-1000">
-    <div 
-      class="card-container {isFlipped ? 'flipped' : ''}"
+    <div
+      class="group card-container {actualFlipped ? 'flipped' : ''}"
       onclick={flipCard}
       onkeydown={(e) => e.key === ' ' && flipCard()}
       role="button"
       tabindex="0"
     >
       <!-- 正面 (單字) -->
-      <Card class="card-face card-front">
+      <Card
+        class="card-face card-front rounded-xl overflow-hidden shadow-lg bg-white group-[.flipped]:hidden"
+      >
         <CardHeader class="text-center pb-4">
           <div class="flex items-center justify-center space-x-2 mb-2">
             <h2 class="text-4xl font-bold text-gray-900">{card.word}</h2>
-            {#if pronunciation?.audio}
-              <button
-                onclick={(e) => { e.stopPropagation(); playPronunciation(); }}
-                disabled={isPlaying}
-                class="p-2 rounded-full hover:bg-gray-100 transition-colors {isPlaying ? 'animate-pulse' : ''}"
-                title="播放發音"
-              >
-                🔊
-              </button>
-            {/if}
           </div>
-          
+
           {#if pronunciation?.phonetic}
-            <p class="text-lg text-gray-600 font-mono">/{pronunciation.phonetic}/</p>
+            <p class="text-lg text-gray-600 font-mono">
+              /{pronunciation.phonetic}/
+            </p>
           {/if}
-          
+
           {#if posArray.length > 0}
             <div class="flex justify-center space-x-2 mt-2">
               {#each posArray as pos}
-                <span class="px-2 py-1 bg-blue-100 text-blue-800 text-sm rounded-full">
+                <span
+                  class="px-2 py-1 bg-blue-100 text-blue-800 text-sm rounded-full"
+                >
                   {pos}
                 </span>
               {/each}
             </div>
           {/if}
         </CardHeader>
-        
+
         <CardContent class="text-center">
           <p class="text-gray-500 mb-4">點擊查看定義</p>
           <div class="text-6xl mb-4">🤔</div>
         </CardContent>
       </Card>
-
+      
       <!-- 背面 (定義) -->
-      <Card class="card-face card-back">
-        <CardHeader class="text-center pb-4">
-          <h3 class="text-2xl font-bold text-gray-900 mb-2">{card.word}</h3>
-          {#if pronunciation?.phonetic}
-            <p class="text-gray-600 font-mono">/{pronunciation.phonetic}/</p>
-          {/if}
-        </CardHeader>
-        
-        <CardContent>
-          <div class="space-y-4">
-            <!-- 定義 -->
-            <div class="bg-gray-50 p-4 rounded-lg">
-              <h4 class="font-semibold text-gray-900 mb-2">定義</h4>
-              <p class="text-gray-700 leading-relaxed">{card.definition}</p>
-            </div>
+      <Card
+        class="card-face card-back rounded-xl shadow-lg bg-white hidden group-[.flipped]:block"
+      >
+        <div class="transform rotate-y-180 flex flex-col">
+          <CardHeader class="text-center pb-4 flex-shrink-0">
+            <h3 class="text-2xl font-bold text-gray-900 mb-2">{card.word}</h3>
+            {#if pronunciation?.phonetic}
+              <p class="text-gray-600 font-mono">/{pronunciation.phonetic}/</p>
+            {/if}
+          </CardHeader>
 
-            <!-- 詞性 -->
-            {#if posArray.length > 0}
-              <div>
-                <h4 class="font-semibold text-gray-900 mb-2">詞性</h4>
-                <div class="flex flex-wrap gap-2">
-                  {#each posArray as pos}
-                    <span class="px-3 py-1 bg-blue-100 text-blue-800 text-sm rounded-full">
-                      {pos}
-                    </span>
+          <CardContent class="flex-1 overflow-y-scroll">
+            <div class="space-y-4">
+              <!-- 詞性 -->
+              {#if posArray.length > 0}
+                <div>
+                  <h4 class="font-semibold text-gray-900 mb-2">詞性</h4>
+                  <div class="flex flex-wrap gap-2">
+                    {#each posArray as pos}
+                      <span
+                        class="px-3 py-1 bg-blue-100 text-blue-800 text-sm rounded-full"
+                      >
+                        {pos}
+                      </span>
+                    {/each}
+                  </div>
+                </div>
+              {/if}
+              
+              <!-- 定義 -->
+              <div class="bg-gray-50 p-4 rounded-lg">
+                <h4 class="font-semibold text-gray-900 mb-3">定義</h4>
+                <div class="space-y-4 overflow-y-auto h-[500px]">
+                  {#each parsedDefinitions as def, index}
+                    <div class="border-l-4 border-blue-200 pl-4">
+                      <!-- 詞性標籤 -->
+                      {#if def.partOfSpeech}
+                        <div class="mb-2">
+                          <span
+                            class="inline-block px-2 py-1 bg-blue-100 text-blue-800 text-xs rounded-full font-medium"
+                          >
+                            {def.partOfSpeech}
+                          </span>
+                        </div>
+                      {/if}
+
+                      <!-- 定義文本 -->
+                      <p class="text-gray-700 leading-relaxed mb-2">
+                        {def.definition}
+                      </p>
+
+                      <!-- 例句 -->
+                      {#if def.example}
+                        <div class="bg-blue-50 p-2 rounded text-sm">
+                          <span class="text-blue-600 font-medium">例句：</span>
+                          <span class="text-gray-700 italic">{def.example}</span>
+                        </div>
+                      {/if}
+
+                      <!-- 同義詞和反義詞 -->
+                      {#if def.synonyms.length > 0 || def.antonyms.length > 0}
+                        <div class="mt-2 space-y-1">
+                          {#if def.synonyms.length > 0}
+                            <div class="text-xs">
+                              <span class="text-green-600 font-medium">同義詞：</span>
+                              <span class="text-gray-600">{def.synonyms.join(', ')}</span>
+                            </div>
+                          {/if}
+                          {#if def.antonyms.length > 0}
+                            <div class="text-xs">
+                              <span class="text-red-600 font-medium">反義詞：</span>
+                              <span class="text-gray-600">{def.antonyms.join(', ')}</span>
+                            </div>
+                          {/if}
+                        </div>
+                      {/if}
+                    </div>
+
+                    <!-- 分隔線（除了最後一個） -->
+                    {#if index < parsedDefinitions.length - 1}
+                      <hr class="border-gray-200" />
+                    {/if}
                   {/each}
                 </div>
               </div>
-            {/if}
 
-            <!-- 統計資訊 -->
-            <div class="text-sm text-gray-500 border-t pt-3">
-              <div class="flex justify-between">
-                <span>查看次數: {card.seen_count}</span>
-                <span>建立時間: {formatDate(card.created_at)}</span>
+              <!-- 統計資訊 -->
+              <div class="text-sm text-gray-500 border-t pt-3">
+                <div class="flex justify-between">
+                  <span>查看次數: {card.seen_count}</span>
+                  <span>建立時間: {formatDate(card.created_at)}</span>
+                </div>
               </div>
             </div>
-          </div>
-        </CardContent>
+          </CardContent>
+        </div>
       </Card>
-    </div>
-  </div>
-
-  <!-- 熟悉度控制 -->
-  <div class="mt-6 space-y-4">
-    <!-- 當前熟悉度顯示 -->
-    <div class="text-center">
-      <div class="inline-flex items-center space-x-2 px-4 py-2 rounded-full {currentFamiliarity.color}">
-        <span class="text-lg">{currentFamiliarity.emoji}</span>
-        <span class="font-medium">{currentFamiliarity.label}</span>
-      </div>
-    </div>
-
-    <!-- 熟悉度按鈕 -->
-    <div class="grid grid-cols-4 gap-2">
-      {#each familiarityLevels as level}
-        <Button
-          variant={card.familiarity === level.level ? 'default' : 'outline'}
-          size="sm"
-          onclick={() => updateFamiliarity(level.level)}
-          class="flex flex-col items-center py-3 h-auto"
-        >
-          <span class="text-lg mb-1">{level.emoji}</span>
-          <span class="text-xs">{level.label}</span>
-          <span class="text-xs text-gray-500">({level.level + 1})</span>
-        </Button>
-      {/each}
-    </div>
-
-    <!-- 操作按鈕 -->
-    <div class="flex justify-center space-x-3 pt-4 border-t">
-      <Button
-        variant="outline"
-        size="sm"
-        onclick={flipCard}
-        class="flex items-center space-x-2"
-      >
-        <span>🔄</span>
-        <span>翻轉</span>
-      </Button>
-      
-      {#if pronunciation?.audio}
-        <Button
-          variant="outline"
-          size="sm"
-          onclick={playPronunciation}
-          disabled={isPlaying}
-          class="flex items-center space-x-2"
-        >
-          <span>{isPlaying ? '⏸️' : '🔊'}</span>
-          <span>發音</span>
-        </Button>
-      {/if}
-      
-      <Button
-        variant="destructive"
-        size="sm"
-        onclick={deleteCard}
-        class="flex items-center space-x-2"
-      >
-        <span>🗑️</span>
-        <span>刪除</span>
-      </Button>
     </div>
   </div>
 </div>
@@ -231,9 +240,8 @@
   .card-container {
     position: relative;
     width: 100%;
-    height: 400px;
     transform-style: preserve-3d;
-    transition: transform 0.6s;
+    transition: transform 0.6s ease;
     cursor: pointer;
   }
 
@@ -246,20 +254,17 @@
     width: 100%;
     height: 100%;
     backface-visibility: hidden;
-    display: flex;
-    flex-direction: column;
-    justify-content: center;
+    top: 0;
+    left: 0;
+    border-radius: 1rem;
   }
 
   .card-front {
     z-index: 2;
+    transform: rotateY(0deg);
   }
 
   .card-back {
     transform: rotateY(180deg);
-  }
-
-  .card-container:hover {
-    box-shadow: 0 10px 25px rgba(0, 0, 0, 0.1);
   }
 </style>

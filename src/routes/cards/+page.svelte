@@ -4,6 +4,7 @@
   import FlashCard from '$lib/presentation/components/FlashCard.svelte';
   import CardFilters from '$lib/presentation/components/CardFilters.svelte';
   import CardStats from '$lib/presentation/components/CardStats.svelte';
+  import FamiliarityControl from '$lib/presentation/components/FamiliarityControl.svelte';
   import { WordCardService } from '$lib/application/services/wordCardService';
   import type { WordCard } from '$lib/domain/types/wordCard';
   import { toast } from 'svelte-sonner';
@@ -17,6 +18,7 @@
   let selectedFamiliarity = $state<number | null>(null);
   let sortBy = $state<'word' | 'familiarity' | 'created_at'>('word');
   let sortOrder = $state<'asc' | 'desc'>('asc');
+  let isCardFlipped = $state(false);
 
   // 使用 $derived rune 進行響應式計算
   const currentCard = $derived(filteredCards[currentCardIndex] || null);
@@ -83,24 +85,28 @@
 
     filteredCards = filtered;
     currentCardIndex = 0; // 重置到第一張卡片
+    isCardFlipped = false; // 重置翻轉狀態
   }
 
   // 導航函數
   function nextCard() {
     if (currentCardIndex < filteredCards.length - 1) {
       currentCardIndex++;
+      isCardFlipped = false; // 重置翻轉狀態
     }
   }
 
   function prevCard() {
     if (currentCardIndex > 0) {
       currentCardIndex--;
+      isCardFlipped = false; // 重置翻轉狀態
     }
   }
 
   function goToCard(index: number) {
     if (index >= 0 && index < filteredCards.length) {
       currentCardIndex = index;
+      isCardFlipped = false; // 重置翻轉狀態
     }
   }
 
@@ -230,6 +236,13 @@
             totalCards={allCards.length}
             filteredCards={filteredCards.length}
           />
+          <FamiliarityControl 
+            card={currentCard}
+            onupdatefamiliarity={(familiarity: number) => currentCard && updateFamiliarity(currentCard.id!, familiarity)}
+            onflip={() => isCardFlipped = !isCardFlipped}
+            ondelete={() => currentCard && deleteCard(currentCard.id!)}
+            isFlipped={isCardFlipped}
+          />
         </div>
 
         <!-- 右側：單字卡展示 -->
@@ -249,8 +262,10 @@
               <!-- 單字卡 -->
               <FlashCard 
                 card={currentCard}
-                onupdatefamiliarity={(familiarity) => updateFamiliarity(currentCard.id!, familiarity)}
+                onupdatefamiliarity={(familiarity: number) => updateFamiliarity(currentCard.id!, familiarity)}
                 ondelete={() => deleteCard(currentCard.id!)}
+                onflip={() => isCardFlipped = !isCardFlipped}
+                isFlipped={isCardFlipped}
               />
 
               <!-- 導航控制 -->

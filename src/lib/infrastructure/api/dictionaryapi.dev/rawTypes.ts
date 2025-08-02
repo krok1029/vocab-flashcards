@@ -8,6 +8,10 @@ export type RawDictionaryEntry = {
     definitions: {
       definition: string;
       example?: string;
+      synonyms?: string[];
+      antonyms?: string[];
     }[];
+    synonyms?: string[];
+    antonyms?: string[];
   }[];
 };

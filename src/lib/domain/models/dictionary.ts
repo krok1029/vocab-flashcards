@@ -7,6 +7,10 @@ export type DictionaryEntry = {
     definitions: {
       definition: string;
       example?: string;
+      synonyms?: string[];
+      antonyms?: string[];
     }[];
+    synonyms?: string[];
+    antonyms?: string[];
   }[];
 };

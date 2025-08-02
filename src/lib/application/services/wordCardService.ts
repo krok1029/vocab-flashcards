@@ -68,31 +68,101 @@ export class WordCardService {
   static mapWordCardToDictionaryEntry(card: WordCard): DictionaryEntry {
     const pronunciation = parsePronunciation(card.pronunciation);
     
+    // 解析存儲的詞性
+    let partOfSpeechList: string[] = [];
+    try {
+      partOfSpeechList = JSON.parse(card.pos || '[]');
+    } catch {
+      partOfSpeechList = card.pos ? [card.pos] : [];
+    }
+
+    // 解析定義文本，重建 meanings 結構
+    const definitionText = card.definition || '';
+    const definitionBlocks = definitionText.split('\n\n');
+    
+    const meanings = partOfSpeechList.map((pos, index) => {
+      // 找到對應此詞性的定義
+      const relevantDefinitions = definitionBlocks.filter(block => 
+        block.includes(`[${pos}]`)
+      );
+      
+      const definitions = relevantDefinitions.length > 0 
+        ? relevantDefinitions.map(block => {
+            // 提取定義文本（移除詞性標記）
+            const lines = block.split('\n');
+            const definitionLine = lines[0].replace(`[${pos}] `, '');
+            
+            // 提取例句
+            const exampleLine = lines.find(line => line.startsWith('例句: '));
+            const example = exampleLine ? exampleLine.replace('例句: ', '') : undefined;
+            
+            return {
+              definition: definitionLine,
+              example,
+            };
+          })
+        : [
+            {
+              definition: definitionText || '',
+              example: undefined,
+            },
+          ];
+
+      return {
+        partOfSpeech: pos,
+        definitions,
+      };
+    });
+
     return {
       word: card.word,
       phonetic: pronunciation?.phonetic ?? '',
       audio: pronunciation?.audio ?? '',
-      meanings: card.pos
-        ? [
+      meanings: meanings.length > 0 ? meanings : [
+        {
+          partOfSpeech: partOfSpeechList[0] || '',
+          definitions: [
             {
-              partOfSpeech: card.pos,
-              definitions: [
-                {
-                  definition: card.definition ?? '',
-                  example: undefined, // DB doesn't store examples yet
-                },
-              ],
+              definition: definitionText || '',
+              example: undefined,
             },
-          ]
-        : [],
+          ],
+        },
+      ],
     };
   }
 
   private static prepareCardPayload(entry: DictionaryEntry): WordCardPayload {
+    // 收集所有定義，按詞性分組
+    const allDefinitions = entry.meanings.flatMap(meaning => 
+      meaning.definitions.map((def, index) => {
+        let definitionText = `[${meaning.partOfSpeech}] ${def.definition}`;
+        
+        // 加入例句
+        if (def.example) {
+          definitionText += `\n例句: ${def.example}`;
+        }
+        
+        // 加入同義詞（優先使用定義層級的，再使用詞性層級的）
+        const synonyms = def.synonyms || meaning.synonyms;
+        if (synonyms && synonyms.length > 0) {
+          definitionText += `\n同義詞: ${synonyms.join(', ')}`;
+        }
+        
+        // 加入反義詞（優先使用定義層級的，再使用詞性層級的）
+        const antonyms = def.antonyms || meaning.antonyms;
+        if (antonyms && antonyms.length > 0) {
+          definitionText += `\n反義詞: ${antonyms.join(', ')}`;
+        }
+        
+        return definitionText;
+      })
+    );
+
     return {
       word: entry.word,
       pos: JSON.stringify(entry.meanings.map((m) => m.partOfSpeech)),
-      definition: entry.meanings[0]?.definitions?.[0]?.definition || '',
+      definition: allDefinitions.join('\n\n'), // 用雙換行分隔不同定義
       pronunciation: stringifyPronunciation({
         phonetic: entry.phonetic || '',
         audio: entry.audio || '',

@@ -6,7 +6,7 @@ export function adaptDictionaryApiResponse(
 ): DictionaryEntry | null {
   if (!raw || raw.length === 0) return null;
 
-  const entry = raw[0]; // 只取第一筆最常用的解釋
+  const entry = raw[0]; // 取第一筆最常用的解釋
 
   const audio = entry.phonetics?.find((p) => p.audio)?.audio;
 
@@ -19,7 +19,11 @@ export function adaptDictionaryApiResponse(
       definitions: m.definitions.map((d: any) => ({
         definition: d.definition,
         example: d.example,
+        synonyms: d.synonyms,
+        antonyms: d.antonyms,
       })),
+      synonyms: m.synonyms,
+      antonyms: m.antonyms,
     })),
   };
 }
