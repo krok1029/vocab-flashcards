@@ -1,31 +1,33 @@
 <script lang="ts">
-  import { createEventDispatcher } from 'svelte';
   import Button from '$lib/presentation/components/ui/button/button.svelte';
   import Input from '$lib/presentation/components/ui/input/input.svelte';
 
-  export let query = '';
-  export let loading = false;
-  export let canSave = false;
+  interface Props {
+    query?: string;
+    loading?: boolean;
+    canSave?: boolean;
+    onsearch?: (query: string) => void;
+    onsave?: () => void;
+  }
+
+  let { query = '', loading = false, canSave = false, onsearch, onsave }: Props = $props();
 
   // Internal state for the input field
-  let inputValue = query;
+  let inputValue = $state(query);
 
   // Update internal state when external query changes
-  $: inputValue = query;
-
-  const dispatch = createEventDispatcher<{
-    search: string;
-    save: void;
-  }>();
+  $effect(() => {
+    inputValue = query;
+  });
 
   function handleSearch() {
     console.log('Searching for:', inputValue);
-    dispatch('search', inputValue);
+    onsearch?.(inputValue);
   }
 
   function handleSave() {
     console.log('Saving word card');
-    dispatch('save');
+    onsave?.();
   }
 
   function handleKeydown(event: KeyboardEvent) {

@@ -1,25 +1,25 @@
 <script lang="ts">
-  import { createEventDispatcher } from 'svelte';
   import Button from '$lib/presentation/components/ui/button/button.svelte';
   import Input from '$lib/presentation/components/ui/input/input.svelte';
 
-  export let query = '';
-  export let loading = false;
-  export let canSave = false;
+  interface Props {
+    query?: string;
+    loading?: boolean;
+    canSave?: boolean;
+    onsearch?: (query: string) => void;
+    onsave?: () => void;
+  }
 
-  const dispatch = createEventDispatcher<{
-    search: string;
-    save: void;
-  }>();
+  let { query = $bindable(''), loading = false, canSave = false, onsearch, onsave }: Props = $props();
 
   function handleSearch() {
     console.log('Searching for:', query);
-    dispatch('search', query);
+    onsearch?.(query);
   }
 
   function handleSave() {
     console.log('Saving word card');
-    dispatch('save');
+    onsave?.();
   }
 
   function handleKeydown(event: KeyboardEvent) {
@@ -30,23 +30,26 @@
 </script>
 
 <div class="flex gap-2">
-  <Input
-    class="flex-1"
-    placeholder="輸入單字..."
-    bind:value={query}
-    on:keydown={handleKeydown}
-    {disabled}={loading}
-  />
-  <Button 
-    class="bg-blue-500 text-white px-4 py-1 rounded hover:bg-blue-600 disabled:opacity-50" 
-    on:click={handleSearch}
+  <!-- Use a wrapper div to handle the keydown event -->
+  <div class="flex-1">
+    <Input
+      class="w-full"
+      placeholder="輸入單字..."
+      onkeydown={handleKeydown}
+      bind:value={query}
+      disabled={loading}
+    />
+  </div>
+  <Button
+    class="bg-blue-500 text-white px-4 py-1 rounded hover:bg-blue-600 disabled:opacity-50"
+    onclick={handleSearch}
     disabled={loading}
   >
     {loading ? '載入中...' : '查詢'}
   </Button>
   <Button
     class="px-4 py-1 rounded bg-green-600 text-white hover:bg-green-700 disabled:opacity-50"
-    on:click={handleSave}
+    onclick={handleSave}
     disabled={!canSave || loading}
   >
     加入單字卡

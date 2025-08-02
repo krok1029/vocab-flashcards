@@ -21,7 +21,7 @@
       <h2 class="text-xl font-bold">{entry.word}</h2>
       {#if entry.audio}
         <button
-          on:click={playAudio}
+          onclick={playAudio}
           class="text-sm text-blue-600 underline hover:text-blue-800 transition-colors"
           title="播放發音"
         >

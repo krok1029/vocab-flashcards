@@ -1,33 +1,33 @@
 <script lang="ts">
   import { onMount } from 'svelte';
   import * as Alert from '$lib/presentation/components/ui/alert/index.js';
-  import { 
-    SearchInput, 
-    WordDisplay, 
-    LoadingSpinner, 
-    ErrorDisplay 
+  import {
+    SearchInput,
+    WordDisplay,
+    LoadingSpinner,
+    ErrorDisplay,
   } from '$lib/presentation/components';
   import { MainLayout } from '$lib/presentation/layouts';
-  import { 
-    dictionaryStore, 
-    hasEntry, 
-    canSaveCard 
+  import {
+    dictionaryStore,
+    hasEntry,
+    canSaveCard,
   } from '$lib/application/stores';
-  import { 
-    SearchCommand, 
-    SaveWordCardCommand 
+  import {
+    SearchCommand,
+    SaveWordCardCommand,
   } from '$lib/application/commands';
 
   // Reactive store subscriptions
-  $: ({ query, entry, loading, error, existsInCard } = $dictionaryStore);
-  $: showEntry = $hasEntry;
-  $: canSave = $canSaveCard;
+  let storeValue = $derived($dictionaryStore);
+  let { query, entry, loading, error, existsInCard } = $derived(storeValue);
+  let showEntry = $derived($hasEntry);
+  let canSave = $derived($canSaveCard);
 
   // Event handlers
-  async function handleSearch(event: CustomEvent<string>) {
-    const searchQuery = event.detail;
-    dictionaryStore.setQuery(searchQuery);
-    await SearchCommand.execute(searchQuery);
+  async function handleSearch(query: string) {
+    dictionaryStore.setQuery(query);
+    await SearchCommand.execute(query);
   }
 
   async function handleSave() {
@@ -48,8 +48,8 @@
   });
 </script>
 
-<MainLayout 
-  title="字典查詢 - 單字卡工具" 
+<MainLayout
+  title="字典查詢 - 單字卡工具"
   description="查詢英文單字定義、發音，並建立個人單字卡"
 >
   <div class="space-y-6 max-w-4xl mx-auto">
@@ -71,12 +71,12 @@
 
     <!-- Search Section -->
     <section class="space-y-4">
-      <SearchInput 
-        query={query}
+      <SearchInput
+        {query}
         {loading}
-        canSave={canSave}
-        on:search={handleSearch}
-        on:save={handleSave}
+        {canSave}
+        onsearch={handleSearch}
+        onsave={handleSave}
       />
     </section>
 
