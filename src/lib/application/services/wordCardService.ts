@@ -15,6 +15,15 @@ export class WordCardService {
     }
   }
 
+  static async getAllWordCards(): Promise<WordCard[]> {
+    try {
+      return await invoke<WordCard[]>('get_all_word_cards');
+    } catch (error) {
+      console.error('Failed to get all word cards:', error);
+      throw new Error(`Failed to get all word cards: ${error}`);
+    }
+  }
+
   static async saveWordCard(entry: DictionaryEntry): Promise<void> {
     const payload = this.prepareCardPayload(entry);
     
@@ -23,6 +32,36 @@ export class WordCardService {
     } catch (error) {
       console.error('Failed to save word card:', error);
       throw new Error(`Failed to save word card: ${error}`);
+    }
+  }
+
+  static async updateFamiliarity(cardId: number, familiarity: number): Promise<void> {
+    try {
+      await invoke('update_word_card_familiarity', {
+        cardId,
+        familiarityLevel: familiarity,
+      });
+    } catch (error) {
+      console.error('Failed to update familiarity:', error);
+      throw new Error(`Failed to update familiarity: ${error}`);
+    }
+  }
+
+  static async deleteWordCard(cardId: number): Promise<void> {
+    try {
+      await invoke('delete_word_card', { cardId });
+    } catch (error) {
+      console.error('Failed to delete word card:', error);
+      throw new Error(`Failed to delete word card: ${error}`);
+    }
+  }
+
+  static async incrementSeenCount(cardId: number): Promise<void> {
+    try {
+      await invoke('increment_word_card_seen_count', { cardId });
+    } catch (error) {
+      console.error('Failed to increment seen count:', error);
+      throw new Error(`Failed to increment seen count: ${error}`);
     }
   }
 

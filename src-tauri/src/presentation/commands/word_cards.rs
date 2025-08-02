@@ -58,3 +58,81 @@ pub fn get_word_card_by_word(word_query: String) -> Result<Option<WordCard>, Str
         }
     }
 }
+
+#[tauri::command]
+pub fn get_all_word_cards() -> Result<Vec<WordCard>, String> {
+    let mut conn = establish_connection();
+
+    word_cards
+        .select(WordCard::as_select())
+        .load::<WordCard>(&mut conn)
+        .map_err(|e| {
+            println!("❌ 查詢所有單字卡失敗：{}", e);
+            e.to_string()
+        })
+}
+
+#[tauri::command]
+pub fn update_word_card_familiarity(card_id: i32, familiarity_level: i32) -> Result<(), String> {
+    let mut conn = establish_connection();
+
+    println!("🔄 更新單字卡熟悉度：ID {} -> {}", card_id, familiarity_level);
+
+    let updated_rows = diesel::update(word_cards.filter(id.eq(card_id)))
+        .set(familiarity.eq(familiarity_level))
+        .execute(&mut conn)
+        .map_err(|e| {
+            println!("❌ 更新熟悉度失敗：{}", e);
+            e.to_string()
+        })?;
+
+    if updated_rows == 0 {
+        return Err(format!("找不到 ID 為 {} 的單字卡", card_id));
+    }
+
+    println!("✅ 熟悉度更新成功：ID {} -> {}", card_id, familiarity_level);
+    Ok(())
+}
+
+#[tauri::command]
+pub fn delete_word_card(card_id: i32) -> Result<(), String> {
+    let mut conn = establish_connection();
+
+    println!("🗑️ 刪除單字卡：ID {}", card_id);
+
+    let deleted_rows = diesel::delete(word_cards.filter(id.eq(card_id)))
+        .execute(&mut conn)
+        .map_err(|e| {
+            println!("❌ 刪除單字卡失敗：{}", e);
+            e.to_string()
+        })?;
+
+    if deleted_rows == 0 {
+        return Err(format!("找不到 ID 為 {} 的單字卡", card_id));
+    }
+
+    println!("✅ 單字卡刪除成功：ID {}", card_id);
+    Ok(())
+}
+
+#[tauri::command]
+pub fn increment_word_card_seen_count(card_id: i32) -> Result<(), String> {
+    let mut conn = establish_connection();
+
+    println!("👀 增加單字卡查看次數：ID {}", card_id);
+
+    let updated_rows = diesel::update(word_cards.filter(id.eq(card_id)))
+        .set(seen_count.eq(seen_count + 1))
+        .execute(&mut conn)
+        .map_err(|e| {
+            println!("❌ 更新查看次數失敗：{}", e);
+            e.to_string()
+        })?;
+
+    if updated_rows == 0 {
+        return Err(format!("找不到 ID 為 {} 的單字卡", card_id));
+    }
+
+    println!("✅ 查看次數更新成功：ID {}", card_id);
+    Ok(())
+}

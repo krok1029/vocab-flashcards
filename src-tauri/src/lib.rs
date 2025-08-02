@@ -30,6 +30,10 @@ pub fn run() {
                 greet, // ✅ 這裡要有
                 presentation::commands::word_cards::save_word_card,
                 presentation::commands::word_cards::get_word_card_by_word,
+                presentation::commands::word_cards::get_all_word_cards,
+                presentation::commands::word_cards::update_word_card_familiarity,
+                presentation::commands::word_cards::delete_word_card,
+                presentation::commands::word_cards::increment_word_card_seen_count,
             ]
         )
         .run(tauri::generate_context!())
