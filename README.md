@@ -128,12 +128,12 @@ vocab-flashcards/
 
 2. **安裝前端依賴**
    ```bash
-   npm install
+   yarn install
    ```
 
 3. **安裝 Tauri CLI**（如果尚未安裝）
    ```bash
-   npm install -g @tauri-apps/cli
+   yarn add -g @tauri-apps/cli
    ```
 
 4. **設定資料庫**
@@ -154,13 +154,13 @@ vocab-flashcards/
 ### 開發模式
 ```bash
 # 啟動開發伺服器
-npm run tauri dev
+yarn run tauri dev
 ```
 
 ### 建置應用程式
 ```bash
 # 建置桌面應用程式
-npm run tauri build
+yarn run tauri build
 ```
 
 ## 📦 功能進度
