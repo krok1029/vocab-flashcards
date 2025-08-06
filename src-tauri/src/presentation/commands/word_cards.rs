@@ -1,32 +1,37 @@
 use diesel::prelude::*;
 use diesel::dsl::{exists, select};
+use log::{info, error, debug, warn};
 use crate::infrastructure::persistence::establish_connection;
 use crate::domain::entities::word_cards::{NewWordCard, WordCard};
 use crate::infrastructure::persistence::schema::word_cards::dsl::*;
+use crate::infrastructure::logger::Logger;
 
 #[tauri::command]
 pub fn save_word_card(card: NewWordCard) -> Result<(), String> {
     let mut conn = establish_connection();
 
-    println!("🔍 嘗試儲存單字卡：{}", card.word);
+    Logger::log_command_execution("save_word_card", &format!("word: {}", card.word));
+    info!("🔍 嘗試儲存單字卡：{}", card.word);
 
     let exists = select(exists(word_cards.filter(word.eq(&card.word))))
         .get_result::<bool>(&mut conn)
         .map_err(|e| {
-            println!("❌ 查詢是否存在時失敗：{}", e);
+            Logger::error_with_context("save_word_card", &format!("查詢是否存在時失敗：{}", e));
+            error!("❌ 查詢是否存在時失敗：{}", e);
             e.to_string()
         })?;
 
     if exists {
-        println!("📝 該單字已存在，更新 seen_count...");
+        info!("📝 該單字已存在，更新 seen_count...");
         diesel::update(word_cards.filter(word.eq(&card.word)))
             .set(seen_count.eq(seen_count + 1))
             .execute(&mut conn)
             .map_err(|e| {
-                println!("❌ 更新失敗：{}，錯誤：{}", card.word, e);
+                Logger::error_with_context("save_word_card", &format!("更新失敗：{}，錯誤：{}", card.word, e));
+                error!("❌ 更新失敗：{}，錯誤：{}", card.word, e);
                 e.to_string()
             })?;
-        println!("✅ 更新成功：{} 的 seen_count +1", card.word);
+        info!("✅ 更新成功：{} 的 seen_count +1", card.word);
     } else {
         diesel::insert_into(word_cards)
             .values(&card)
