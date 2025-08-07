@@ -1,4 +1,4 @@
-use log::{info, warn, error, debug};
+use log::{info, warn};
 use crate::infrastructure::logging;
 
 // Domain layer - 領域層
@@ -65,6 +65,9 @@ pub fn run() {
                 presentation::commands::word_cards::update_word_card_familiarity,
                 presentation::commands::word_cards::delete_word_card,
                 presentation::commands::word_cards::increment_word_card_seen_count,
+                // 測試和調試命令
+                presentation::commands::word_cards::get_all_word_cards_simple,
+                presentation::commands::word_cards::test_database_connection,
             ]
         )
         .run(tauri::generate_context!())

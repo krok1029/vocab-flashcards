@@ -4,7 +4,6 @@ use tracing_subscriber::{
     layer::SubscriberExt,
     util::SubscriberInitExt,
     EnvFilter,
-    Layer,
 };
 use tracing_appender::{non_blocking, rolling};
 
