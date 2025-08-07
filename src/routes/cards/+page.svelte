@@ -8,6 +8,8 @@
   import { WordCardService } from '$lib/application/services/wordCardService';
   import type { WordCard } from '$lib/domain/types/wordCard';
   import { toast } from 'svelte-sonner';
+  import * as Dialog from '$lib/presentation/components/ui/dialog';
+  import Button from '$lib/presentation/components/ui/button/button.svelte';
 
   // 使用 Svelte 5 的 $state rune
   let allCards = $state<WordCard[]>([]);
@@ -19,6 +21,10 @@
   let sortBy = $state<'word' | 'familiarity' | 'created_at'>('word');
   let sortOrder = $state<'asc' | 'desc'>('asc');
   let isCardFlipped = $state(false);
+  
+  // 刪除確認對話框狀態
+  let showDeleteDialog = $state(false);
+  let cardToDelete = $state<number | null>(null);
 
   // 使用 $derived rune 進行響應式計算
   const currentCard = $derived(filteredCards[currentCardIndex] || null);
@@ -130,14 +136,23 @@
   }
 
   // 刪除單字卡
-  async function deleteCard(cardId: number) {
-    if (!confirm('確定要刪除這張單字卡嗎？')) return;
+  function deleteCard(cardId: number) {
+    console.log('Preparing to delete card with ID:', cardId);
+    cardToDelete = cardId;
+    showDeleteDialog = true;
+  }
+
+  // 確認刪除單字卡
+  async function confirmDeleteCard() {
+    if (cardToDelete === null) return;
+    
+    console.log('Deleting card with ID:', cardToDelete);
     
     try {
-      await WordCardService.deleteWordCard(cardId);
+      await WordCardService.deleteWordCard(cardToDelete);
       
       // 更新本地狀態
-      allCards = allCards.filter(card => card.id !== cardId);
+      allCards = allCards.filter(card => card.id !== cardToDelete);
       applyFilters();
       
       // 調整當前卡片索引
@@ -149,7 +164,17 @@
     } catch (error) {
       console.error('Failed to delete card:', error);
       toast.error('刪除單字卡失敗');
+    } finally {
+      // 重置對話框狀態
+      showDeleteDialog = false;
+      cardToDelete = null;
     }
+  }
+
+  // 取消刪除
+  function cancelDelete() {
+    showDeleteDialog = false;
+    cardToDelete = null;
   }
 
   // 鍵盤快捷鍵
@@ -325,3 +350,23 @@
     {/if}
   </div>
 </MainLayout>
+
+<!-- 刪除確認對話框 -->
+<Dialog.Root bind:open={showDeleteDialog}>
+  <Dialog.Content class="sm:max-w-[425px]">
+    <Dialog.Header>
+      <Dialog.Title>確認刪除</Dialog.Title>
+      <Dialog.Description>
+        確定要刪除這張單字卡嗎？此操作無法復原。
+      </Dialog.Description>
+    </Dialog.Header>
+    <Dialog.Footer>
+      <Button variant="outline" onclick={cancelDelete}>
+        取消
+      </Button>
+      <Button variant="destructive" onclick={confirmDeleteCard}>
+        確定刪除
+      </Button>
+    </Dialog.Footer>
+  </Dialog.Content>
+</Dialog.Root>
