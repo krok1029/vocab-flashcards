@@ -190,13 +190,6 @@ yarn run tauri build
   - [Tauri](https://marketplace.visualstudio.com/items?itemName=tauri-apps.tauri-vscode)
   - [rust-analyzer](https://marketplace.visualstudio.com/items?itemName=rust-lang.rust-analyzer)
 
-## 📄 相關文件
-
-- [DDD 架構說明](./DDD_ARCHITECTURE.md)
-- [功能詳細規格](./feature.md)
-- [Shadcn 路徑更新](./SHADCN_PATH_UPDATES.md)
-- [Rust 架構修復](./RUST_DDD_FIXES.md)
-
 ## 🤝 貢獻
 
 歡迎提交 Issue 和 Pull Request！
