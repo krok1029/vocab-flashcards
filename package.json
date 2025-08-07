@@ -1,7 +1,7 @@
 {
   "name": "vocab-flashcards",
-  "version": "0.1.0",
-  "description": "",
+  "version": "1.0.0",
+  "description": "一款基於 Tauri 和 SvelteKit 開發的智能單字卡學習工具，支援字典查詢、批次匯入、熟悉度管理與複習系統",
   "type": "module",
   "scripts": {
     "dev": "vite dev",

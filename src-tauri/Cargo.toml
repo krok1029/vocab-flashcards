@@ -1,8 +1,8 @@
 [package]
 name = "vocab-flashcards"
-version = "0.1.0"
-description = "A Tauri App"
-authors = ["you"]
+version = "1.0.0"
+description = "A modern vocabulary flashcard learning application built with Tauri and SvelteKit, featuring dictionary lookup, batch import, familiarity management, and intelligent review system"
+authors = ["limingfeng"]
 edition = "2021"
 
 # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
